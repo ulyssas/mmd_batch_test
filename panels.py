@@ -1,6 +1,6 @@
 import bpy
 
-from .operators import OpenFolderOperator
+from .operators import BatchTestOperator, OpenFolderOperator
 
 
 class MMDBatchTestPanel(bpy.types.Panel):
@@ -15,4 +15,4 @@ class MMDBatchTestPanel(bpy.types.Panel):
         layout.label(text="Batch Model Tester", icon="EXPERIMENTAL")
         col = layout.column()
         col.operator(OpenFolderOperator.bl_idname, text="Open", icon="FILEBROWSER")
-        col.operator(OpenFolderOperator.bl_idname, text="Execute", icon="FILE_MOVIE")
+        col.operator(BatchTestOperator.bl_idname, text="Execute", icon="FILE_MOVIE")
