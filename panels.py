@@ -11,8 +11,14 @@ class MMDBatchTestPanel(bpy.types.Panel):
     bl_category = "MMD"
 
     def draw(self, context):
+        wm = context.window_manager
         layout = self.layout
         layout.label(text="Batch Model Tester", icon="EXPERIMENTAL")
+
         col = layout.column()
         col.operator(OpenFolderOperator.bl_idname, text="Open", icon="FILEBROWSER")
-        col.operator(BatchTestOperator.bl_idname, text="Execute", icon="FILE_MOVIE")
+
+        if wm.mmd_batch_test.is_active:
+            col.progress(factor=wm.mmd_batch_test.progress)
+        else:
+            col.operator(BatchTestOperator.bl_idname, text="Execute", icon="FILE_MOVIE")
