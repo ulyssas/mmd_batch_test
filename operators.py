@@ -1,4 +1,3 @@
-import logging
 import os
 import traceback
 from pathlib import Path
@@ -7,9 +6,6 @@ import bpy
 from bpy.types import Operator
 
 from .core.test import MMDTestIKLimit
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 
 class OpenFolderOperator(Operator):
@@ -46,7 +42,7 @@ class OpenFolderOperator(Operator):
 class CleanupSceneOperator(Operator):
     bl_idname = "mmd_batch_test.cleanup_scene"
     bl_label = "Remove Everything"
-    bl_options = {"REGISTER", "UNDO"}
+    bl_options = {"REGISTER"}
 
     def execute(self, context):
         bpy.ops.object.select_all(action="DESELECT")
@@ -58,3 +54,127 @@ class CleanupSceneOperator(Operator):
 
         return {"FINISHED"}
 
+
+class BatchTestOperator(Operator):
+    bl_idname = "mmd_batch_test.batch_test"
+    bl_label = "Run Test"
+    # bl_description = "Open root folder that contains models"
+    bl_options = {"REGISTER"}
+
+    _timer = None
+    _pmx_files = []
+    _total_count = 0
+    _current_index = 0
+
+    @staticmethod
+    def print_log(text: str):
+        if text.startswith("PASS:"):
+            print("✅ " + text)
+        elif text.startswith("FAIL:"):
+            print("⚠️ " + text)
+        elif text.startswith("ERROR:"):
+            print("❌ " + text)
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context):
+        wm = context.window_manager
+        if wm.mmd_batch_test.is_active:
+            return False
+        return bool(wm.mmd_batch_test.directory)
+
+    def modal(self, context, event):
+        wm = context.window_manager
+        prop = wm.mmd_batch_test
+
+        if event.type == "ESC":
+            self.cancel(context)
+            self.report({"INFO"}, "Batch test was cancelled.")
+            return {"CANCELLED"}
+
+        if event.type == "TIMER":
+            if self._current_index < self._total_count:
+                pmx = self._pmx_files[self._current_index]
+                try:
+                    # TODO add random selection (limit to 20 (too slow)?)
+                    # import PMX file
+                    bpy.ops.mmd_tools.import_model(
+                        filepath=str(pmx.absolute()),
+                        types={"ARMATURE"},
+                        scale=0.08,
+                        clean_model=False,
+                        remove_doubles=False,
+                        log_level="ERROR",
+                    )
+
+                    # Test the model
+                    msg = ""
+                    result = MMDTestIKLimit(context).tester()
+                    if result is True:
+                        msg = f"PASS: {pmx.name} ({self._current_index + 1}/{self._total_count})"
+                        self.report({"INFO"}, msg)
+                    elif result is False:
+                        msg = f"FAIL: {pmx.name} ({self._current_index + 1}/{self._total_count})"
+                        self.report({"WARNING"}, msg)
+                    else:
+                        msg = f"ERROR: {pmx.name} ({result}) ({self._current_index + 1}/{self._total_count})"
+                        self.report({"ERROR"}, msg)
+                    self.print_log(msg)
+                except Exception as e:
+                    self.report({"ERROR"}, f"Error while processing {pmx.name}: {e}")
+                    self.report({"ERROR"}, traceback.format_exc())
+
+                # for next process
+                bpy.ops.mmd_batch_test.cleanup_scene()
+
+                self._current_index += 1
+                prop.progress = self._current_index / self._total_count
+
+                # force redraw
+                for window in wm.windows:
+                    for area in window.screen.areas:
+                        area.tag_redraw()
+            else:
+                self.cancel(context)
+                self.report({"INFO"}, "Batch test DONE!")
+                return {"CANCELLED"}
+
+        return {"PASS_THROUGH"}
+
+    def execute(self, context):
+        wm = context.window_manager
+        prop = wm.mmd_batch_test
+        directory = prop.directory
+
+        # find PMX files
+        root_dir = Path(directory)
+        self._pmx_files = list(root_dir.rglob("*.[Pp][Mm][XxDd]"))
+        if not self._pmx_files:
+            self.report({"WARNING"}, "No PMX files found in the folder.")
+            return {"CANCELLED"}
+
+        # initialize
+        self._total_count = len(self._pmx_files)
+        self._current_index = 0
+
+        prop.is_active = True
+        prop.progress = 0.0
+
+        # bpy.ops.view3d.view_axis(type="FRONT")
+        bpy.ops.mmd_batch_test.cleanup_scene()
+
+        self._timer = wm.event_timer_add(0.1, window=context.window)
+        wm.modal_handler_add(self)
+
+        self.report({"INFO"}, f"Started batch test for {self._total_count} models.")
+        return {"RUNNING_MODAL"}
+
+    def cancel(self, context):
+        wm = context.window_manager
+        prop = wm.mmd_batch_test
+
+        prop.is_active = False
+        prop.progress = 0.0
+
+        if self._timer:
+            wm.event_timer_remove(self._timer)
+            self._timer = None

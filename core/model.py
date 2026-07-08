@@ -1,11 +1,16 @@
 """Module for finding MMD model components in Blender objects. (from MMD Tools Helper)"""
 
 import logging
+import sys
 
 import bpy
 
-logger = logging.getLogger()
+logger = logging.getLogger("mmd_batch_test")
 logger.setLevel(logging.DEBUG)
+
+if not logger.handlers:
+    handler = logging.StreamHandler(sys.stdout)
+    logger.addHandler(handler)
 
 
 def find_root(obj: bpy.types.Object) -> bpy.types.Object | None:
