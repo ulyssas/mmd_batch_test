@@ -61,10 +61,14 @@ class BatchTestOperator(Operator):
     # bl_description = "Open root folder that contains models"
     bl_options = {"REGISTER"}
 
+    # for toggling log file
+    enable_log = True
+
     _timer = None
     _pmx_files = []
     _total_count = 0
     _current_index = 0
+    _log_filepath = None
 
     @staticmethod
     def print_log(text: str):
@@ -118,10 +122,23 @@ class BatchTestOperator(Operator):
                     else:
                         msg = f"ERROR: {pmx.name} ({result}) ({self._current_index + 1}/{self._total_count})"
                         self.report({"ERROR"}, msg)
+
                     self.print_log(msg)
+                    if self.enable_log:
+                        with open(self._log_filepath, "a", encoding="utf-8") as f:
+                            f.write(msg + "\n")
+
                 except Exception as e:
+                    err_msg = traceback.format_exc()
                     self.report({"ERROR"}, f"Error while processing {pmx.name}: {e}")
-                    self.report({"ERROR"}, traceback.format_exc())
+                    self.report({"ERROR"}, err_msg)
+
+                    if self.enable_log:
+                        with open(self._log_filepath, "a", encoding="utf-8") as f:
+                            f.write(f"ERROR_EXCEPTION: {pmx.name}\n")
+                            f.write(f"Reason: {e}\n")
+                            f.write(f"{err_msg}\n")
+                            f.write("-" * 20 + "\n")
 
                 # for next process
                 bpy.ops.mmd_batch_test.cleanup_scene()
@@ -134,6 +151,10 @@ class BatchTestOperator(Operator):
                     for area in window.screen.areas:
                         area.tag_redraw()
             else:
+                if self.enable_log:
+                    with open(self._log_filepath, "a", encoding="utf-8") as f:
+                        f.write("\n=== Batch Test Completed ===\n")
+
                 self.cancel(context)
                 self.report({"INFO"}, "Batch test DONE!")
                 return {"CANCELLED"}
@@ -151,6 +172,16 @@ class BatchTestOperator(Operator):
         if not self._pmx_files:
             self.report({"WARNING"}, "No PMX files found in the folder.")
             return {"CANCELLED"}
+
+        # logging
+        if self.enable_log:
+            temp_dir = Path(context.preferences.filepaths.temporary_directory)
+            self._log_filepath = temp_dir / "test_results.txt"
+            with open(self._log_filepath, "w", encoding="utf-8") as f:
+                f.write("=== MMD Batch Test Results ===\n")
+                f.write(f"Target Directory: {directory}\n")
+                f.write(f"Total Models Found: {len(self._pmx_files)}\n")
+                f.write("-" * 40 + "\n\n")
 
         # initialize
         self._total_count = len(self._pmx_files)
