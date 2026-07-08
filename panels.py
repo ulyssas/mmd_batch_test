@@ -16,9 +16,11 @@ class MMDBatchTestPanel(bpy.types.Panel):
         layout.label(text="Batch Model Tester", icon="EXPERIMENTAL")
 
         col = layout.column()
-        col.operator(OpenFolderOperator.bl_idname, text="Open", icon="FILEBROWSER")
+        if wm.mmd_batch_test.directory:
+            col.label(text=f"Source: {wm.mmd_batch_test.directory}")
 
+        col.operator(OpenFolderOperator.bl_idname, text="Open", icon="FILEBROWSER")
         if wm.mmd_batch_test.is_active:
-            col.progress(factor=wm.mmd_batch_test.progress)
+            col.progress(text="Press esc to cancel", factor=wm.mmd_batch_test.progress)
         else:
             col.operator(BatchTestOperator.bl_idname, text="Execute", icon="FILE_MOVIE")
