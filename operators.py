@@ -8,6 +8,9 @@ from bpy.types import Operator
 
 from .core.test import MMDTestIKLimit
 
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
 
 class OpenFolderOperator(Operator):
     bl_idname = "mmd_batch_test.open_folder"
@@ -19,8 +22,6 @@ class OpenFolderOperator(Operator):
     filter_folder: bpy.props.BoolProperty(default=True, options={"HIDDEN"})
 
     def execute(self, context):
-        logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
         try:
             context.window_manager.mmd_batch_test.directory = self.directory
             self.report({"INFO"}, f'Set root directory: "{self.directory}"')
