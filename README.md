@@ -1,6 +1,6 @@
 # MMD Batch Test
 
-MMD Batch Test is for testing multiple MMD models and find ones that have unexpected structure. (INTENDED FOR ADDON DEVELOPERS)
+MMD Batch Test is a Blender addon for testing multiple MMD models and find ones that have unexpected structure. It creates log files in temp directory set in Blender preferences.
 
 Edit `core/test.py` to add your own testing classes and use it in `BatchTestOperator` (operators.py)
 
