@@ -5,7 +5,7 @@ from pathlib import Path
 import bpy
 from bpy.types import Operator
 
-from .core.test import MMDTestLegDLocal
+from .core import test
 
 
 class OpenFolderOperator(Operator):
@@ -112,7 +112,7 @@ class BatchTestOperator(Operator):
 
                     # Test the model
                     msg = ""
-                    result = MMDTestLegDLocal(context).tester()
+                    result = test.TESTERS[prop.tester](context).tester()
                     if result is True:
                         msg = f"PASS: {pmx.name} ({self._current_index + 1}/{self._total_count})"
                         self.report({"INFO"}, msg)

@@ -8,6 +8,10 @@ from .model import find_armature, find_root
 
 
 class MMDTestABC(ABC):
+    id: str
+    name: str
+    description: str = ""
+
     def __init__(self, context: bpy.types.Context):
         self.context = context
 
@@ -20,8 +24,21 @@ class MMDTestABC(ABC):
         pass
 
 
+class MMDTesters:
+    def __init__(self, *testers: tuple[int, MMDTestABC]):
+        self.testers: dict[str, MMDTestABC] = {tester.id: tester for _, tester in testers}
+        self.blender_enum: list[tuple[str, str, str, int]] = [
+            (tester.id, tester.name, tester.description, idx) for idx, tester in testers
+        ]
+
+    def __getitem__(self, tester_id: str) -> MMDTestABC:
+        return self.testers[tester_id]
+
+
 class MMDTestIKLimit(MMDTestABC):
-    """Test if the model has IK limit in X direction. (Most models should pass.)"""
+    id: str = "IK_LIMIT"
+    name: str = "IK Limit Test"
+    description: str = "Test if the model has IK limit in X direction. (Most models should pass.)"
 
     def __init__(self, context):
         super().__init__(context)
@@ -51,7 +68,9 @@ class MMDTestIKLimit(MMDTestABC):
 
 
 class MMDTestLegDLocal(MMDTestABC):
-    """Test if the model has Local axis in Leg D bones. (Most models should fail.)"""
+    id: str = "LEG_D_LOCAL"
+    name: str = "Leg D Local Test"
+    description: str = "Test if the model has Local axis in Leg D bones. (Most models should fail.)"
 
     def __init__(self, context):
         super().__init__(context)
@@ -82,3 +101,9 @@ class MMDTestLegDLocal(MMDTestABC):
             return e
         finally:
             bpy.ops.object.mode_set(mode=previous_mode)
+
+
+TESTERS = MMDTesters(
+    (0, MMDTestLegDLocal),
+    (1, MMDTestIKLimit),
+)

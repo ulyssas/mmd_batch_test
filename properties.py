@@ -1,7 +1,13 @@
 import bpy
 
+from .core import test
+
 
 class MMDBatchTestProperties(bpy.types.PropertyGroup):
+    tester: bpy.props.EnumProperty(
+        items=test.TESTERS.blender_enum,
+        description="Choose the tester you want to use",
+    )
     directory: bpy.props.StringProperty(maxlen=1024, subtype="DIR_PATH")
     is_active: bpy.props.BoolProperty(default=False)
     progress: bpy.props.FloatProperty(default=0.0)
