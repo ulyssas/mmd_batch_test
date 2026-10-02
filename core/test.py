@@ -103,7 +103,38 @@ class MMDTestLegDLocal(MMDTestABC):
             bpy.ops.object.mode_set(mode=previous_mode)
 
 
+class MMDTestLegParent(MMDTestABC):
+    id: str = "LEG_PARENT"
+    name: str = "Leg Parent Test"
+    description: str = (
+        "Test if the parent of leg is 腰キャンセル if the model has 腰. (Most models should give error or pass.)"
+    )
+
+    def __init__(self, context):
+        super().__init__(context)
+
+    def tester(self) -> bool | None:
+        if not self.mmd_arm:
+            return Exception("Armature object could not be found.")
+
+        try:
+            bpy.ops.object.select_all(action="DESELECT")
+            self.context.view_layer.objects.active = self.mmd_arm
+
+            if self.mmd_arm.pose.bones.get("腰"):
+                if not self.mmd_arm.pose.bones.get("腰キャンセル.L"):
+                    return False
+                return self.mmd_arm.pose.bones["足.L"].parent == self.mmd_arm.pose.bones["腰キャンセル.L"]
+            else:
+                return Exception("Bone '腰' does not exist in this model.")
+
+        except Exception as e:
+            print(traceback.format_exc())
+            return e
+
+
 TESTERS = MMDTesters(
     (0, MMDTestLegDLocal),
     (1, MMDTestIKLimit),
+    (2, MMDTestLegParent),
 )
